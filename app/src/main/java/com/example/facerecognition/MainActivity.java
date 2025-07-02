@@ -1,10 +1,12 @@
 package com.example.facerecognition;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.Image;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -40,6 +42,14 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         Button detectButton = findViewById(R.id.button4);
+        detectButton.setOnClickListener(v -> {
+            detectFace();
+        });
+
+        Button replaceButton = findViewById(R.id.button5);
+        replaceButton.setOnClickListener(v -> {
+            replaceFace();
+        });
 
         FaceDetectorOptions highAccuracyOpts =
                 new FaceDetectorOptions.Builder()
@@ -49,11 +59,11 @@ public class MainActivity extends AppCompatActivity {
                         .build();
 
         detector= FaceDetection.getClient(highAccuracyOpts);
-        detectButton.setOnClickListener(v -> {
-            detectFace();
-        });
+
     }
     public void detectFace(){
+
+        imageView.setImageResource(R.drawable.adam);
         Bitmap bitmap = ((BitmapDrawable) imageView.getDrawable()).getBitmap();
         InputImage image= InputImage.fromBitmap(bitmap, 0);
 
@@ -106,6 +116,37 @@ public class MainActivity extends AppCompatActivity {
                     }
                     imageView.setImageBitmap(resultBitmap);
 
+                }).addOnFailureListener(Throwable::printStackTrace);
+    }
+    public void replaceFace(){
+        imageView.setImageResource(R.drawable.adam);
+        Bitmap original = ((BitmapDrawable) imageView.getDrawable()).getBitmap();
+        InputImage image = InputImage.fromBitmap(original, 0);
+
+        detector.process(image)
+                .addOnSuccessListener(faces -> {
+                    Bitmap resultBitmap = original.copy(Bitmap.Config.ARGB_8888, true);
+                    Canvas canvas = new Canvas(resultBitmap);
+
+                    Bitmap emoji = BitmapFactory.decodeResource(getResources(), R.drawable.img);
+
+                    for (Face face : faces) {
+                        // Replace face with a red rectangle
+                        float scale = 2.5f;
+
+                        int width = Math.round(face.getBoundingBox().width() * scale);
+                        int height = Math.round(face.getBoundingBox().height() * scale);
+
+                        int left= face.getBoundingBox().left;
+                        int top= face.getBoundingBox().top;
+
+                        Bitmap replacementFace = Bitmap.createScaledBitmap(emoji,
+                                width, height, false);
+
+                        canvas.drawBitmap(replacementFace,
+                                left, top, null);
+                    }
+                    imageView.setImageBitmap(resultBitmap);
                 }).addOnFailureListener(Throwable::printStackTrace);
     }
 }
