@@ -1,13 +1,17 @@
 package com.example.facerecognition;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.media.Image;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.widget.Button;
 import android.widget.ImageView;
 
@@ -27,6 +31,7 @@ import com.google.mlkit.vision.face.FaceLandmark;
 public class MainActivity extends AppCompatActivity {
     private ImageView imageView;
     private FaceDetector detector;
+    private static final int REQUEST_IMAGE_PICK = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +54,18 @@ public class MainActivity extends AppCompatActivity {
         Button replaceButton = findViewById(R.id.button5);
         replaceButton.setOnClickListener(v -> {
             replaceFace();
+        });
+
+        Button hatButton = findViewById(R.id.button);
+        hatButton.setOnClickListener(v -> {
+            putHatOnFace();
+        });
+
+        Button galleryButton = findViewById(R.id.button3);
+        galleryButton.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQUEST_IMAGE_PICK);
         });
 
         FaceDetectorOptions highAccuracyOpts =
@@ -148,5 +165,59 @@ public class MainActivity extends AppCompatActivity {
                     }
                     imageView.setImageBitmap(resultBitmap);
                 }).addOnFailureListener(Throwable::printStackTrace);
+    }
+    private void putHatOnFace() {
+        Bitmap src = BitmapFactory.decodeResource(getResources(), R.drawable.adam);
+        if (src.getWidth() > 1024 || src.getHeight() > 1024) {
+            float k = 1024f / Math.max(src.getWidth(), src.getHeight());
+            src = Bitmap.createScaledBitmap(src,
+                    Math.round(src.getWidth() * k),
+                    Math.round(src.getHeight() * k), true);
+        }
+        Bitmap bmp = src.copy(Bitmap.Config.ARGB_8888, true);
+
+        detector.process(InputImage.fromBitmap(bmp, 0))
+                .addOnSuccessListener(faces -> {
+                    if (faces.isEmpty()){
+                        return;
+                    }
+
+                    Canvas canvas = new Canvas(bmp);
+                    Bitmap hat = BitmapFactory.decodeResource(getResources(),
+                            R.drawable.img_3);
+
+                    for (Face face : faces) {
+                        Rect box = face.getBoundingBox();
+
+
+                        float scale = 1.4f;
+                        int hatWidth = Math.round(box.width() * scale);
+                        int hatHeight = Math.round(hatWidth * hat.getHeight() / (float) hat.getWidth());
+
+                        Bitmap hatScaled = Bitmap.createScaledBitmap(hat, hatWidth, hatHeight, true);
+
+
+                        float x = box.centerX() - hatScaled.getWidth() / 3f;
+                        float y = box.top - hatScaled.getHeight() * 0.75f;
+                        canvas.drawBitmap(hatScaled, x, y, null);
+                    }
+                    imageView.setImageBitmap(bmp);
+                })
+                .addOnFailureListener(Throwable::printStackTrace);
+    }
+
+
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_IMAGE_PICK && resultCode == RESULT_OK && data != null) {
+            try {
+                Uri imageUri = data.getData();
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                imageView.setImageBitmap(bitmap);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
