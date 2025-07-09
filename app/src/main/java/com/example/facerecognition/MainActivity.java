@@ -1,5 +1,9 @@
 package com.example.facerecognition;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,6 +17,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -265,11 +271,28 @@ public class MainActivity extends AppCompatActivity {
         float startX = (float) (Math.random() * (snowContainer.getWidth() - size));
         snowFlake.setX(startX);
         snowFlake.setY(-size);
-        snowFlake.animate()
-                .translationY(snowContainer.getHeight() + size)
-                .setDuration((long) (Math.random() * 3000 + 2000))
-                .withEndAction(() -> {
-                    snowContainer.removeView(snowFlake);
-                });
+
+
+        long duration = (long) (Math.random() * 3000 + 2000);
+
+        ObjectAnimator animator = ObjectAnimator.ofFloat(snowFlake, "rotation", 0f, 360f);
+        animator.setDuration(duration);
+        animator.setRepeatCount(ObjectAnimator.INFINITE);
+        animator.setInterpolator(new AccelerateInterpolator());
+
+        ObjectAnimator animator2 = ObjectAnimator.ofFloat(snowFlake, "translationY",  snowContainer.getHeight() + size);
+        animator2.setDuration(duration);
+        animator2.setInterpolator(new LinearInterpolator());
+
+        AnimatorSet animatorSet = new AnimatorSet();
+        animatorSet.playTogether(animator, animator2);
+        animatorSet.start();
+
+        animator2.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                snowContainer.removeView(snowFlake);
+            }
+        });
     }
 }
