@@ -11,8 +11,10 @@ import android.graphics.drawable.BitmapDrawable;
 import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 import androidx.activity.EdgeToEdge;
@@ -31,7 +33,22 @@ import com.google.mlkit.vision.face.FaceLandmark;
 public class MainActivity extends AppCompatActivity {
     private ImageView imageView;
     private FaceDetector detector;
+    private FrameLayout snowContainer;
     private static final int REQUEST_IMAGE_PICK = 1;
+
+    private final Handler handler = new Handler();
+    private boolean snowRunning = false;
+
+    private final Runnable snowTask = new Runnable() {
+        @Override
+        public void run() {
+            addSnowFlake();
+            if (snowRunning) {
+                // Add snow animation logic here
+                handler.postDelayed(this, 300);
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +63,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         imageView = findViewById(R.id.imageView);
+        snowContainer = findViewById(R.id.snow_container);
+
         Button detectButton = findViewById(R.id.button4);
         detectButton.setOnClickListener(v -> {
             detectFace();
@@ -60,6 +79,20 @@ public class MainActivity extends AppCompatActivity {
         hatButton.setOnClickListener(v -> {
             putHatOnFace();
         });
+
+        Button animationButton = findViewById(R.id.button2);
+        animationButton.setOnClickListener(v->{
+            snowRunning = !snowRunning;
+            if (snowRunning) {
+                handler.post(snowTask);
+                animationButton.setText("Stop Snow");
+            } else {
+                handler.removeCallbacks(snowTask);
+                snowContainer.removeAllViews();
+                animationButton.setText("Start Snow");
+            }
+        });
+
 
         Button galleryButton = findViewById(R.id.button3);
         galleryButton.setOnClickListener(v -> {
@@ -219,5 +252,24 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void addSnowFlake() {
+        ImageView snowFlake = new ImageView(this);
+        snowFlake.setImageResource(R.drawable.snowflake);
+
+        int size= (int) (getResources().getDisplayMetrics().density * (30 + Math.random() * 20));
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(size, size);
+        snowContainer.addView(snowFlake, params);
+
+        float startX = (float) (Math.random() * (snowContainer.getWidth() - size));
+        snowFlake.setX(startX);
+        snowFlake.setY(-size);
+        snowFlake.animate()
+                .translationY(snowContainer.getHeight() + size)
+                .setDuration((long) (Math.random() * 3000 + 2000))
+                .withEndAction(() -> {
+                    snowContainer.removeView(snowFlake);
+                });
     }
 }
